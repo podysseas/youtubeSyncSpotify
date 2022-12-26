@@ -22,8 +22,13 @@ SCOPES = ['https://www.googleapis.com/auth/youtube.force-ssl']
 API_SERVICE_NAME = 'youtube'
 API_VERSION = 'v3'
 log = logging.getLogger(__name__)
-logging.basicConfig(level = logging.INFO)
+logging.basicConfig(level = logging.DEBUG)
+
+
 def get_authenticated_service():
+    ''' 
+      Loads and returns an authorized YouTube API service.
+    '''
     if os.path.exists("CREDENTIALS_PICKLE_FILE"):
         print("Using old files credentials!")
         with open("CREDENTIALS_PICKLE_FILE", 'rb') as f:
@@ -38,6 +43,10 @@ def get_authenticated_service():
 
 # create a method to automatic renew credentials after 6 days 
 def existing_credentials():
+    
+    '''
+     This method should be called to renew credentials
+    '''
     if os.path.exists("CREDENTIALS_PICKLE_FILE"):
         print("Using old files credentials!")
         with open("CREDENTIALS_PICKLE_FILE", 'rb') as f:
@@ -46,6 +55,10 @@ def existing_credentials():
     return credentials
 
 def extract_next_token(response):
+  '''
+    This method return the next token page according to the response received
+    Response is a json object.
+  '''
   if "nextPageToken" in response:
     print("Next token =>: ",response["nextPageToken"])
     return response["nextPageToken"]
@@ -55,6 +68,10 @@ def extract_next_token(response):
     return ""
 
 def extract_next_page_liked_videos(service,nextPage):
+  
+  '''
+    This method has input the authenticated service and the token for the next page
+  '''
   return service.videos().list(part="snippet,contentDetails,statistics",
                                        myRating = "like",
                                        prettyPrint=True,
@@ -62,6 +79,9 @@ def extract_next_page_liked_videos(service,nextPage):
                                        pageToken=nextPage).execute()
 
 def update_list_videos(videos_list,response):
+    '''
+      This method updates the list of videos according to the response received
+    '''
     d = []
     log.debug("Updating videos list...")
     for it in response["items"]:
@@ -72,7 +92,7 @@ def update_list_videos(videos_list,response):
                   " and title %s",it["snippet"]["title"])
         myDict = dict()
         myDict["id"] = it["id"]
-        myDict["catageryId"] = it["snippet"]["categoryId"]
+        myDict["categoryId"] = it["snippet"]["categoryId"]
         myDict["title"] = it["snippet"]["title"]
         videos_list.append(myDict)
     return videos_list
@@ -85,6 +105,18 @@ def write_to_json(data,filename):
   with open(pathFile, 'w',encoding='utf-8') as j:
     json.dump(data, j,ensure_ascii=False,indent=4)
 
+def search_videos(service,keyword):
+  return service.search().list(
+        part="snippet",
+        maxResults=25,
+        q=keyword
+    ).execute()["items"][0]
+  
+def like_video(service,video_id):
+  return service.videos().rate(
+        id=video_id,
+        rating="like"
+    ).execute()
 if __name__ == '__main__':
   # When running locally, disable OAuthlib's HTTPs verification. When
   # running in production *do not* leave this option enabled.
@@ -108,9 +140,6 @@ if __name__ == '__main__':
 
   unique = { each['id'] : each for each in videos_list }
   
-  write_to_json(videos_list,"data.json")
-  write_to_json(unique,"data_unique.json")
-  write_to_json(response,"response.json")
-
-  
-
+  write_to_json(videos_list,"data.json") # raw data - only music videos
+  write_to_json(unique,"data_unique.json") # verify no duplicates
+  write_to_json(response,"sample_response.json") # sample response 
