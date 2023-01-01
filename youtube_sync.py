@@ -21,8 +21,8 @@ CLIENT_SECRETS_FILE = "client_secret_desktop.json"
 SCOPES = ['https://www.googleapis.com/auth/youtube.force-ssl']
 API_SERVICE_NAME = 'youtube'
 API_VERSION = 'v3'
-log = logging.getLogger(__name__)
 logging.basicConfig(level = logging.DEBUG)
+log = logging.getLogger(__name__)
 
 
 def get_authenticated_service():
@@ -88,8 +88,12 @@ def update_list_videos(videos_list,response):
       
       if it["snippet"]["categoryId"] == "10":
         log.debug("This is a music video!")
-        log.debug("Saving video with id %s",it["id"], " with category %s",it["snippet"]["categoryId"],
-                  " and title %s",it["snippet"]["title"])
+        
+        # log.debug("Saving video : \n id: '{0}'\n category: '{1}'\n title: '{2}'").(str(it["id"]),
+        #                                                                            it["snippet"]["categoryId"],
+        #                                                                            it["snippet"]["title"])
+        # log.debug("Saving video with id %s",it["id"], " with category %s",it["snippet"]["categoryId"],
+        log.debug(f'Saving video :\n    id: {it["id"]} \n    category: {it["snippet"]["categoryId"]} \n    title: { it["snippet"]["title"]}')
         myDict = dict()
         myDict["id"] = it["id"]
         myDict["categoryId"] = it["snippet"]["categoryId"]
