@@ -109,6 +109,9 @@ class YouTubeSyncer():
     def get_and_format_liked_songs(self):
         songs = self.get_liked_songs()
         # reconstruct the list of songs
+        return self.format_tracks(songs)
+    
+    def format_tracks(self,songs):
         d = []
         for item in songs['items']:
             if item["snippet"]["categoryId"] == "10" : # take only music"
@@ -120,25 +123,26 @@ class YouTubeSyncer():
                 myDict["title"] = item["snippet"]["title"]
                 d.append(myDict)
         return d
-    
+      
     def collect_all_tracks(self):
         if self.cred_is_valid():
             collected_data =[]
             while self.nextPageToken != "":
-                self.nextPageToken = myYouTube.get_liked_songs()["nextPageToken"]
+                self.nextPageToken = self.get_liked_songs()["nextPageToken"]
                 collected_data = collected_data + self.get_and_format_liked_songs()
             return collected_data
         else:
             log.info("Something bad happened!")    
+            
     def search_track(self,keyword):
         return self.service.search().list(
                 part="snippet",
                 maxResults=25,
                 q=keyword
-            ).execute()["items"][0]  
+            ).execute()["items"][0]
     
-    def like_track(service,video_id): # needs format
-        return service.videos().rate(
+    def like_track(self,video_id): # needs format
+        return self.service.videos().rate(
                 id=video_id,
                 rating="like"
             ).execute()     
@@ -165,10 +169,13 @@ if __name__ == '__main__':
         songs_from_spotify = json.load(json_file)
     
   for song in songs_from_spotify:
-        title_song = song['name']
-        log.info(f'Song from spotify is preformated way   {song["name"]}')
-        title_song_unicode = unidecode(song['name'])
+        title_song = str(song['name'] + " - " + song['artist'])
+       
+        log.info(f'Song from spotify is preformated way   {title_song}')
+        title_song_unicode = unidecode( title_song)
         log.info(f'Song from spotify is in unicode format {title_song_unicode}')
         result = myYouTube.search_track(title_song_unicode)
-        log.info(f'Result from YOUTUBE api is {result}')
-        myYouTube.like_track(result[0]['track_id'])  
+        log.info(f"Result from YOUTUBE api is {result['snippet']['title']}")
+        myYouTube.like_track(result['id']["videoId"])
+         
+        
