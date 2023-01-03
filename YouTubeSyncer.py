@@ -1,5 +1,7 @@
 
 import pickle
+from unidecode import unidecode
+
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from google.auth.transport.requests import Request
@@ -82,6 +84,7 @@ class YouTubeSyncer():
             else:
                 log.debug("This is the last page")
                 self.nextPageToken =""
+            write_to_json(resp,"data.json")
             return resp 
         else:
             return self.service.videos().list(part="snippet,contentDetails,statistics",
@@ -127,7 +130,18 @@ class YouTubeSyncer():
             return collected_data
         else:
             log.info("Something bad happened!")    
-            
+    def search_track(self,keyword):
+        return self.service.search().list(
+                part="snippet",
+                maxResults=25,
+                q=keyword
+            ).execute()["items"][0]  
+    
+    def like_track(service,video_id): # needs format
+        return service.videos().rate(
+                id=video_id,
+                rating="like"
+            ).execute()     
 #================================================================
 
 def write_to_json(data,filename):
@@ -144,7 +158,17 @@ if __name__ == '__main__':
   myYouTube.setLogLevel('DEBUG')
   myYouTube.load_credentials()
   myYouTube.get_authenticated_service()
-  collected_songs = myYouTube.collect_all_tracks()  
-  write_to_json(collected_songs,"songs_liked_youtube.json")
+#   collected_songs = myYouTube.collect_all_tracks()  
+#   write_to_json(collected_songs,"songs_liked_youtube.json")
   
+  with open('songs_liked_spotify.json', encoding="utf8") as json_file:
+        songs_from_spotify = json.load(json_file)
     
+  for song in songs_from_spotify:
+        title_song = song['name']
+        log.info(f'Song from spotify is preformated way   {song["name"]}')
+        title_song_unicode = unidecode(song['name'])
+        log.info(f'Song from spotify is in unicode format {title_song_unicode}')
+        result = myYouTube.search_track(title_song_unicode)
+        log.info(f'Result from YOUTUBE api is {result}')
+        myYouTube.like_track(result[0]['track_id'])  
