@@ -210,7 +210,11 @@ if __name__ == '__main__':
     mySpotify.renew_token()
 #   collected_songs = mySpotify.collect_all_tracks()  
 #   write_to_json(collected_songs,"songs_liked_spotify.json")
-  
+    
+    #TODO : Fetch first tracks that are liked by Spotify 
+    #       save them by id in json format
+    #       and then try to like the 'new' ones 
+    #
     with open('songs_liked_youtube.json', encoding="utf8") as json_file:
         songs_from_youtube = json.load(json_file)
     
