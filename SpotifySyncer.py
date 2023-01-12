@@ -1,9 +1,11 @@
 import base64
 import requests
 import logging
-import editdistance
+import datetime
 import os,json # to remove
 from unidecode import unidecode
+import re 
+from Helpers import Helpers
 log = logging.getLogger(__name__)
 filename = "log1.txt"
 __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
@@ -77,8 +79,6 @@ class SpotifySyncer():
         response = requests.get(url=tracks_url, headers=headers,params =params)
         log.debug(f'Request details : {response.request.url} ,body : {response.request.body},headers : {response.request.headers}')
         if response.status_code == 200:
-            write_to_json(response.json(),"data.json")
-
             return response.json()
         else:
             log.info("Something went wrong")
@@ -108,7 +108,7 @@ class SpotifySyncer():
             artist    = item['track']['album']['artists'][0]['name']
             log.debug(f'Saving track: {track_id}')
             log.debug(f'Name: {name_song}  & Artist: {artist}')
-            myDict['name'] = name_song
+            myDict['title'] = name_song
             myDict['artist'] = artist
             myDict["track_id"] = track_id
             d.append(myDict)
@@ -192,43 +192,50 @@ class SpotifySyncer():
             log.info(f'Song with id : {track_id} successfully liked!')
         else:
             log.info("Something went wrong")
+
+    
+                     
 #================================================================
-
-
-def write_to_json(data,filename):
-  __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
-
-  pathFile = os.path.join(__location__, filename)
-  log.debug("Data are set at: %s" % pathFile)
-  with open(pathFile, 'w',encoding='utf-8') as j:
-    json.dump(data, j,ensure_ascii=False,indent=4)
 
 if __name__ == '__main__':
   
     mySpotify   = SpotifySyncer()
-    mySpotify.setLogLevel('INFO')
+    mySpotify.setLogLevel('DEBUG')
     mySpotify.renew_token()
-#   collected_songs = mySpotify.collect_all_tracks()  
-#   write_to_json(collected_songs,"songs_liked_spotify.json")
+    helpers = Helpers()
+    helpers.setLogLevel('DEBUG')
     
-    #TODO : Fetch first tracks that are liked by Spotify 
-    #       save them by id in json format
-    #       and then try to like the 'new' ones 
-    #
-    with open('songs_liked_youtube.json', encoding="utf8") as json_file:
+    # Collect new data from Spotify
+    collected_songs = mySpotify.collect_all_tracks()
+    new_filename  = "songs_liked_spotify_"  + helpers.set_file_attribute() + ".json"
+    helpers.write_to_json(collected_songs,new_filename)
+    
+    # Extract diff data from Spotify
+    old_data = helpers.load_data(filename=helpers.return_old_data("spotify"))
+    new_data = helpers.load_data(filename=new_filename)
+    diff = helpers.compare_songs(old_data, new_data)
+    if len(diff) != 0:
+        d = []
+        for track_id in diff:
+            info_id = [ item for item in new_data if item['track_id'] == track_id] 
+            log.info(f'Info of new song is {info_id}')
+            d.append(info_id)
+        helpers.write_to_json(d,"new_songs_liked_spotify.json")            
+    
+    # like songs from Youtube
+    with open('songs_liked_youtube_' + helpers.set_file_attribute() +".json", encoding="utf8") as json_file:
         songs_from_youtube = json.load(json_file)
     
-    # mySpotify.like_a_song("0CMYUXTTTmI6Lwc0opH2XG")
     for song in songs_from_youtube:
         title_song = song['title']
         log.info(f'Song from youtube is {song["title"]}')
         title_song_unicode = unidecode(song['title'])
-        log.info(f'Song from youtube is in unicode format {title_song_unicode}')
+        log.debug(f'Song from youtube is in unicode format {title_song_unicode}')
         result = mySpotify.search_track(title_song_unicode,limit = 1)
         log.info(f'Result from SPOTIFY api is {result}')
         mySpotify.like_a_song(result[0]['track_id'])
-        
-        
+    
+    
         
         
         
