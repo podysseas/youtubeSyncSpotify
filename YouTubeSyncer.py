@@ -9,6 +9,7 @@ from datetime import datetime,timedelta
 import logging
 import json,os # to remove
 log = logging.getLogger(__name__)
+from Helpers import Helpers
 
 class YouTubeSyncer():
     """
@@ -78,19 +79,19 @@ class YouTubeSyncer():
             resp = self.service.videos().list(part="snippet,contentDetails,statistics",
                                             myRating = "like",
                                             prettyPrint=True,
-                                            maxResults=30,pageToken=self.nextPageToken).execute()
+                                            maxResults=50,pageToken=self.nextPageToken).execute()
             if "nextPageToken" in resp.keys():
                 log.debug("Transferring to next page")
             else:
                 log.debug("This is the last page")
                 self.nextPageToken =""
-            write_to_json(resp,"data.json")
+            # write_to_json(resp,"data.json")
             return resp 
         else:
             return self.service.videos().list(part="snippet,contentDetails,statistics",
                                             myRating = "like",
                                             prettyPrint=True,
-                                            maxResults=30).execute()
+                                            maxResults=50).execute()
 
     
     def cred_is_valid(self):
@@ -118,7 +119,7 @@ class YouTubeSyncer():
                 log.debug(f'Saving track: {item["id"]}')
                 log.debug(f'Name: {item["snippet"]["title"]}  & Category : {item["snippet"]["categoryId"]}')
                 myDict = dict()
-                myDict["id"] = item["id"]
+                myDict["track_id"] = item["id"]
                 myDict["categoryId"] = item["snippet"]["categoryId"]
                 myDict["title"] = item["snippet"]["title"]
                 d.append(myDict)
@@ -137,7 +138,7 @@ class YouTubeSyncer():
     def search_track(self,keyword):
         return self.service.search().list(
                 part="snippet",
-                maxResults=25,
+                maxResults=50,
                 q=keyword
             ).execute()["items"][0]
     
@@ -145,42 +146,64 @@ class YouTubeSyncer():
         return self.service.videos().rate(
                 id=video_id,
                 rating="like"
-            ).execute()     
+            ).execute() 
+    
+    def is_new(self, track_id):
+        with open('songs_from_youtube.json', encoding="utf8") as json_file:
+            songs_from_youtube = json.load(json_file)
+        log.debug(f'Checking if track with {track_id} is already liked.')
+        new = len([song['track_id'] for song in songs_from_youtube if song['track_id']] ) == 0
+        return new
+
 #================================================================
 
-def write_to_json(data,filename):
-  __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
 
-  pathFile = os.path.join(__location__, filename)
-  log.debug("Data are set at: %s" % pathFile)
-  with open(pathFile, 'w',encoding='utf-8') as j:
-    json.dump(data, j,ensure_ascii=False,indent=4)
 
 if __name__ == '__main__':
   
-  myYouTube   = YouTubeSyncer()
-  myYouTube.setLogLevel('DEBUG')
-  myYouTube.load_credentials()
-  myYouTube.get_authenticated_service()
-#   collected_songs = myYouTube.collect_all_tracks()  
-#   write_to_json(collected_songs,"songs_liked_youtube.json")
-  
-    #TODO : Fetch first tracks that are liked by Youtube 
-    #       save them by id in json format
-    #       and then try to like the 'new' ones 
-    #
-  
-  with open('songs_liked_spotify.json', encoding="utf8") as json_file:
-        songs_from_spotify = json.load(json_file)
+    myYouTube   = YouTubeSyncer()
+    myYouTube.setLogLevel('INFO')
+    myYouTube.load_credentials()
+    myYouTube.get_authenticated_service()
+    collected_songs = myYouTube.collect_all_tracks()
+    helpers = Helpers()
+    new_filename = "songs_liked_youtube_"  + helpers.set_file_attribute() + ".json"
+    helpers.write_to_json(collected_songs,new_filename)
+
+
+    # Extract diff data from Youtube
+    old_data = helpers.load_data(filename=helpers.return_old_data("youtube"))
+    new_data = helpers.load_data(filename=new_filename)
+    diff = helpers.compare_songs(old_data, new_data)
+    if len(diff) != 0:
+        d = []
+        for track_id in diff:
+            info_id = [ item for item in new_data if item['track_id'] == track_id] 
+            log.info(f'Info of new song is {info_id}')
+            d.append(info_id)
+        helpers.write_to_json(d,"new_songs_from_youtube.json")            
+
+    # Like the new ones from Spotify
+    new_songs_from_spotify = helpers.load_data('new_songs_from_spotify.json')
     
-  for song in songs_from_spotify:
-        title_song = str(song['name'] + " - " + song['artist'])
-       
+    for song in new_songs_from_spotify:
+        title_song = str(song[0]['title']) + "-" + str(song[0]['artist']) # different format from Spotify
+    
         log.info(f'Song from spotify is preformated way   {title_song}')
         title_song_unicode = unidecode( title_song)
         log.info(f'Song from spotify is in unicode format {title_song_unicode}')
         result = myYouTube.search_track(title_song_unicode)
         log.info(f"Result from YOUTUBE api is {result['snippet']['title']}")
-        myYouTube.like_track(result['id']["videoId"])
+        if myYouTube.is_new(result['id']['videoId']):
+            log.debug("We will like the song")
+            myYouTube.like_track(result['id']["videoId"])
+        else:
+            log.debug(f'Song from spotify is already liked')
+       
+        
+    
+        
+       
+        
          
         
