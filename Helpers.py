@@ -3,6 +3,7 @@ import os
 import logging
 import json
 import re 
+import shutil
 log = logging.getLogger(__name__)
 __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
 
@@ -42,10 +43,19 @@ class Helpers():
         for filepath in os.listdir(pathdir):
             if pattern.match(filepath):
                 os.remove(os.path.join(__location__, filepath))
-                
+    
+    def rename_data_old(self,source_name):
+        pathdir = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
+        pattern = re.compile("songs_.*"+ source_name )
+        for filepath in os.listdir(pathdir):
+            if pattern.match(filepath):
+                new_name = filepath.rsplit(".")[0]
+                log.debug(f'New name is to {new_name}_old.json')
+                shutil.move(os.path.join(__location__,filepath),os.path.join(__location__,new_name+"_old.json"))
+                           
     def return_old_data(self,source_name):
         pathdir = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
-        pattern = re.compile("songs_.*"+ source_name + ".*_test.json")
+        pattern = re.compile("songs_.*"+ source_name + ".*_old.json")
         for filepath in os.listdir(pathdir):
             if pattern.match(filepath):
                 log.debug(f"Old data is set to {filepath}")

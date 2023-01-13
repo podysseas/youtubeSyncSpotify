@@ -6,6 +6,7 @@ import os,json # to remove
 from unidecode import unidecode
 import re 
 from Helpers import Helpers
+import shutil
 log = logging.getLogger(__name__)
 filename = "log1.txt"
 __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
@@ -200,7 +201,7 @@ class SpotifySyncer():
 if __name__ == '__main__':
   
     mySpotify   = SpotifySyncer()
-    mySpotify.setLogLevel('DEBUG')
+    mySpotify.setLogLevel('INFO')
     mySpotify.renew_token()
     helpers = Helpers()
     helpers.setLogLevel('DEBUG')
@@ -208,11 +209,16 @@ if __name__ == '__main__':
     # Collect new data from Spotify
     collected_songs = mySpotify.collect_all_tracks()
     new_filename  = "songs_liked_spotify_"  + helpers.set_file_attribute() + ".json"
-    helpers.write_to_json(collected_songs,new_filename)
     
-    # Extract diff data from Spotify
+    # load data from previous json file and then remove it
+    helpers.rename_data_old("spotify")
     old_data = helpers.load_data(filename=helpers.return_old_data("spotify"))
+   
+    # write new data to json and load it 
+    helpers.write_to_json(collected_songs,new_filename)
     new_data = helpers.load_data(filename=new_filename)
+    
+    # find the ids that are new songs and returns a json file containing all info for them
     diff = helpers.compare_songs(old_data, new_data)
     if len(diff) != 0:
         d = []
@@ -222,7 +228,8 @@ if __name__ == '__main__':
             d.append(info_id)
         helpers.write_to_json(d,"new_songs_liked_spotify.json")            
     
-    # like songs from Youtube
+    
+    # like songs from Youtube supposing also it was running the same day
     with open('songs_liked_youtube_' + helpers.set_file_attribute() +".json", encoding="utf8") as json_file:
         songs_from_youtube = json.load(json_file)
     
@@ -234,6 +241,8 @@ if __name__ == '__main__':
         result = mySpotify.search_track(title_song_unicode,limit = 1)
         log.info(f'Result from SPOTIFY api is {result}')
         mySpotify.like_a_song(result[0]['track_id'])
+        
+    
     
     
         
