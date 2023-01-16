@@ -155,6 +155,21 @@ class YouTubeSyncer():
         new = len([song['track_id'] for song in songs_from_youtube if song['track_id']] ) == 0
         return new
 
+    def like_song_from_data(self,data):
+        for song in data:
+            title_song = str(song['title']) + "-" + str(song['artist']) # different format from Spotify
+            log.info(f'Song from spotify is preformated way   {title_song}')
+            title_song_unicode = unidecode( title_song)
+            log.info(f'Song from spotify is in unicode format {title_song_unicode}')
+            result = myYouTube.search_track(title_song_unicode)
+            log.info(f"Result from YOUTUBE api is {result['snippet']['title']}")
+            if myYouTube.is_new(result['id']['videoId']):
+                log.debug("We will like the song")
+                myYouTube.like_track(result['id']["videoId"])
+            else:
+                log.debug(f'Song from spotify is already liked')
+       
+        
 #================================================================
 
 
@@ -165,43 +180,42 @@ if __name__ == '__main__':
     myYouTube.setLogLevel('INFO')
     myYouTube.load_credentials()
     myYouTube.get_authenticated_service()
-    collected_songs = myYouTube.collect_all_tracks()
     helpers = Helpers()
-    new_filename = "songs_liked_youtube_"  + helpers.set_file_attribute() + ".json"
-    helpers.write_to_json(collected_songs,new_filename)
-
-
-    # Extract diff data from Youtube
-    old_data = helpers.load_data(filename=helpers.return_old_data("youtube"))
-    new_data = helpers.load_data(filename=new_filename)
-    diff = helpers.compare_songs(old_data, new_data)
-    if len(diff) != 0:
-        d = []
-        for track_id in diff:
-            info_id = [ item for item in new_data if item['track_id'] == track_id] 
-            log.info(f'Info of new song is {info_id}')
-            d.append(info_id)
-        helpers.write_to_json(d,"new_songs_from_youtube.json")            
-
-    # Like the new ones from Spotify
-    new_songs_from_spotify = helpers.load_data('new_songs_from_spotify.json')
     
-    for song in new_songs_from_spotify:
-        title_song = str(song[0]['title']) + "-" + str(song[0]['artist']) # different format from Spotify
+    # # Collect new data from youtube
+    # collected_songs = myYouTube.collect_all_tracks()
+    # new_filename = "songs_liked_youtube_"  + helpers.set_file_attribute() + ".json"
+    # helpers.write_to_json(collected_songs,new_filename)
+
+    # # load data from previous json file 
+    # helpers.rename_data_old("youtube")
+    # old_data = helpers.load_data(filename=helpers.return_old_data("youtube"))
+   
+    # # Extract diff data from Youtube
+    # old_data = helpers.load_data(filename=helpers.return_old_data("youtube"))
+    # new_data = helpers.load_data(filename=new_filename)
+    # diff = helpers.compare_songs(old_data, new_data)
+    # if len(diff) != 0:
+    #     d = []
+    #     for track_id in diff:
+    #         info_id = [ item for item in new_data if item['track_id'] == track_id] 
+    #         log.info(f'Info of new song is {info_id}')
+    #         d.append(info_id)
+    #     helpers.write_to_json(d,"new_songs_from_youtube.json")            
+
+    # # Like the new ones from Spotify
+    # new_songs_from_spotify = helpers.load_data('new_songs_from_spotify.json')
     
-        log.info(f'Song from spotify is preformated way   {title_song}')
-        title_song_unicode = unidecode( title_song)
-        log.info(f'Song from spotify is in unicode format {title_song_unicode}')
-        result = myYouTube.search_track(title_song_unicode)
-        log.info(f"Result from YOUTUBE api is {result['snippet']['title']}")
-        if myYouTube.is_new(result['id']['videoId']):
-            log.debug("We will like the song")
-            myYouTube.like_track(result['id']["videoId"])
-        else:
-            log.debug(f'Song from spotify is already liked')
-       
+    # myYouTube.like_song_from_data(new_songs_from_spotify)
+    # finished in batch 5! Not completed
+    # 
+    for i in range(1,16): # 16 is the batches number 
+        batch_filename = "batch_" + str(i) + "_spotify_date_" + helpers.set_file_attribute() + "_.json"
+        log.info(f"Extracting data from {batch_filename}")
+        data  = helpers.load_data(batch_filename)
+        myYouTube.like_song_from_data(data)
         
-    
+        
         
        
         
