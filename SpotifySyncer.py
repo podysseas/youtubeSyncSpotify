@@ -194,8 +194,16 @@ class SpotifySyncer():
         else:
             log.info("Something went wrong")
 
-    
-                     
+    def like_song_from_data(self, data):
+        for song in data:
+            title_song = song['title']
+            log.info(f'Song from youtube is {song["title"]}')
+            title_song_unicode = unidecode(song['title'])
+            log.debug(f'Song from youtube is in unicode format {title_song_unicode}')
+            result = mySpotify.search_track(title_song_unicode,limit = 1)
+            log.info(f'Result from SPOTIFY api is {result}')
+            mySpotify.like_a_song(result[0]['track_id'])
+                        
 #================================================================
 
 if __name__ == '__main__':
@@ -223,26 +231,34 @@ if __name__ == '__main__':
     if len(diff) != 0:
         d = []
         for track_id in diff:
-            info_id = [ item for item in new_data if item['track_id'] == track_id] 
+            info_id = [ item for item in new_data if item['track_id'] == track_id][0] 
             log.info(f'Info of new song is {info_id}')
             d.append(info_id)
-        helpers.write_to_json(d,"new_songs_liked_spotify.json")            
+    helpers.write_to_json(d,"new_songs_liked_spotify.json")            
     
     
     # like songs from Youtube supposing also it was running the same day
-    with open('songs_liked_youtube_' + helpers.set_file_attribute() +".json", encoding="utf8") as json_file:
+    with open("songs_liked_youtube_01_16.json", encoding="utf8") as json_file:
         songs_from_youtube = json.load(json_file)
     
-    for song in songs_from_youtube:
-        title_song = song['title']
-        log.info(f'Song from youtube is {song["title"]}')
-        title_song_unicode = unidecode(song['title'])
-        log.debug(f'Song from youtube is in unicode format {title_song_unicode}')
-        result = mySpotify.search_track(title_song_unicode,limit = 1)
-        log.info(f'Result from SPOTIFY api is {result}')
-        mySpotify.like_a_song(result[0]['track_id'])
-        
     
+    mySpotify.like_song_from_data(songs_from_youtube)
+    
+        
+    # only for test
+    # create batched json for tracks 
+    # batch  = []
+    # total_number_songs = len(collected_songs)
+    # batches_number = total_number_songs // 20 
+    # print(batches_number)
+    # for i in range(batches_number):
+    #     log.info(len(collected_songs))
+    #     batch = collected_songs[i*20:(i+1)*20-1]
+    #     # batch = collected_songs[20:40]
+    #     helpers.write_to_json(batch, "batch_" + str(i) + "_spotify_date_" + helpers.set_file_attribute() +"_.json")
+        
+        
+        
     
     
         
