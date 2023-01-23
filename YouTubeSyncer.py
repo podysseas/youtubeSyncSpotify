@@ -160,9 +160,10 @@ class YouTubeSyncer():
             title_song = str(song['title']) + "-" + str(song['artist']) # different format from Spotify
             log.info(f'Song from spotify is preformated way   {title_song}')
             title_song_unicode = unidecode( title_song)
-            log.info(f'Song from spotify is in unicode format {title_song_unicode}')
+            log.debug(f'Song from spotify is in unicode format {title_song_unicode}')
             result = myYouTube.search_track(title_song_unicode)
             log.info(f"Result from YOUTUBE api is {result['snippet']['title']}")
+            log.debug(result)
             if myYouTube.is_new(result['id']['videoId']):
                 log.debug("We will like the song")
                 myYouTube.like_track(result['id']["videoId"])
@@ -207,10 +208,10 @@ if __name__ == '__main__':
     # new_songs_from_spotify = helpers.load_data('new_songs_from_spotify.json')
     
     # myYouTube.like_song_from_data(new_songs_from_spotify)
-    # finished in batch 5! Not completed
-    # 
-    for i in range(1,16): # 16 is the batches number 
-        batch_filename = "batch_" + str(i) + "_spotify_date_" + helpers.set_file_attribute() + "_.json"
+    # finished in batch 10! Not completed
+    # 16
+    for i in range(8,16): # 16 is the batches number 
+        batch_filename = "batch_" + str(i) + "_spotify_date_" + "01_16" + "_.json"
         log.info(f"Extracting data from {batch_filename}")
         data  = helpers.load_data(batch_filename)
         myYouTube.like_song_from_data(data)
